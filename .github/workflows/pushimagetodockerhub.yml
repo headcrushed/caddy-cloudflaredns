@@ -31,27 +31,50 @@ jobs:
           CADDY_IMAGE=$(docker inspect --format='{{index .RepoDigests 0}}' caddy:latest)
           echo "CADDY_IMAGE=$CADDY_IMAGE" >> $GITHUB_ENV
 
+      - name: Load previous digest from the repository
+        id: load_digest
+        run: |
+          # Check if the digest file exists and read it, or set it to empty if not
+          if [ -f .caddy-digest.txt ]; then
+            DIGEST_CADDY_CACHE=$(cat .caddy-digest.txt)
+          else
+            DIGEST_CADDY_CACHE=""
+          fi
+          echo "Previous digest: $DIGEST_CADDY_CACHE"
+          echo "DIGEST_CADDY_CACHE=$DIGEST_CADDY_CACHE" >> $GITHUB_ENV
+
       - name: Check for changes
         id: check_changes
         run: |
-          # Check if the digest has changed
-          if [ -f last_digest.txt ]; then
-            LAST_DIGEST=$(cat last_digest.txt)
-          else
-            LAST_DIGEST=""
-          fi
-
-          if [ "$CADDY_IMAGE" != "$LAST_DIGEST" ]; then
+          # Compare the current digest to the previous one
+          if [ "$CADDY_IMAGE" != "$DIGEST_CADDY_CACHE" ]; then
             echo "New Caddy image detected."
-            echo "$CADDY_IMAGE" > last_digest.txt
+            # Update the digest file
+            echo "$CADDY_IMAGE" > .caddy-digest.txt
             echo "new_caddy_image=true" >> $GITHUB_ENV
           else
             echo "No new Caddy image."
             echo "new_caddy_image=false" >> $GITHUB_ENV
           fi
 
-      - name: Build and push Docker image
+      - name: Commit updated digest file to the repository
         if: env.new_caddy_image == 'true'
         run: |
-          docker build -t edipdi/caddy-cloudflaredns:latest .
-          docker push edipdi/caddy-cloudflaredns:latest
+          # Configure Git user for GitHub Actions
+          git config --local user.name "GitHub Actions"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Add the updated digest file to git
+          git add .caddy-digest.txt
+          
+          # Commit the updated digest
+          git commit -m "Update Caddy image digest"
+          
+          # Push the changes using the GitHub Actions token for authentication
+          git push https://x-access-token:${{ secrets.PAT_TOKE }}@github.com/${{ github.repository }} HEAD:main
+
+      #- name: Build and push Docker image
+      #  if: env.new_caddy_image == 'true'
+      #  run: |
+      #    docker build -t edipdi/nc-with-ffmpeg-im:latest .
+      #    docker push edipdi/nc-with-ffmpeg-im:latest
