@@ -1,44 +1,57 @@
-name: Build and Push Caddy Image
+name: Build and Push Docker Image
 
 on:
   schedule:
-    # This will run the workflow at a regular interval (e.g., once a day).
-    - cron: "0 0 * * *"  # Runs daily at midnight UTC
-  workflow_dispatch:
-    # Allows you to manually trigger the workflow
-  push:
-    branches:
-      - main  # Trigger build on changes to the main branch (or whatever branch you use)
+    - cron: '0 0 * * *' # This runs the workflow every hour
+  workflow_dispatch: # Allows manual triggering of the workflow
 
 jobs:
-  build_and_push:
+  build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v2
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Cache Docker layers
-        uses: actions/cache@v3
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
+        uses: docker/setup-buildx-action@v1
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build the image
+      - name: Check for new Caddy image
+        id: check_caddy
         run: |
-          docker buildx create --use
-          docker buildx build --platform linux/amd64 -t edipdi/caddy-cloudflaredns:latest -f DockerFileFolder/Dockerfile DockerFileFolder/
+          # Pull the latest Caddy image
+          docker pull caddy:latest
+          # Get the image digest
+          CADDY_IMAGE=$(docker inspect --format='{{index .RepoDigests 0}}' caddy:latest)
+          echo "CADDY_IMAGE=$CADDYD_IMAGE" >> $GITHUB_ENV
 
-      - name: Push the image to Docker Hub
+      - name: Check for changes
+        id: check_changes
         run: |
-          docker buildx build --platform linux/amd64 -t edipdi/caddy-cloudflaredns:latest -f DockerFileFolder/Dockerfile DockerFileFolder/ --push
+          # Check if the digest has changed
+          if [ -f last_digest.txt ]; then
+            LAST_DIGEST=$(cat last_digest.txt)
+          else
+            LAST_DIGEST=""
+          fi
+
+          if [ "$CADDY_IMAGE" != "$LAST_DIGEST" ]; then
+            echo "New Caddy image detected."
+            echo "$CADDY_IMAGE" > last_digest.txt
+            echo "new_image=true" >> $GITHUB_ENV
+          else
+            echo "No new Caddy image."
+            echo "new_image=false" >> $GITHUB_ENV
+          fi
+
+      - name: Build and push Docker image
+        if: env.new_image == 'true'
+        run: |
+          docker build -t edipdi/caddy-cloudflaredns:latest .
+          docker push edipdi/caddy-cloudflaredns:latest
