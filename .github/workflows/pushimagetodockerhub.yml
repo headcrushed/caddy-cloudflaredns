@@ -35,8 +35,8 @@ jobs:
         id: load_digest
         run: |
           # Check if the digest file exists and read it, or set it to empty if not
-          if [ -f .caddy-digest.txt ]; then
-            DIGEST_CADDY_CACHE=$(cat .caddy-digest.txt)
+          if [ -f .caddy-digest1.txt ]; then
+            DIGEST_CADDY_CACHE=$(cat .caddy-digest1.txt)
           else
             DIGEST_CADDY_CACHE=""
           fi
@@ -50,7 +50,7 @@ jobs:
           if [ "$CADDY_IMAGE" != "$DIGEST_CADDY_CACHE" ]; then
             echo "New Caddy image detected."
             # Update the digest file
-            echo "$CADDY_IMAGE" > .caddy-digest.txt
+            echo "$CADDY_IMAGE" > .caddy-digest1.txt
             echo "new_caddy_image=true" >> $GITHUB_ENV
           else
             echo "No new Caddy image."
@@ -65,7 +65,7 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           
           # Add the updated digest file to git
-          git add .caddy-digest.txt
+          git add .caddy-digest1.txt
           
           # Commit the updated digest
           git commit -m "Update Caddy image digest"
@@ -76,5 +76,5 @@ jobs:
       - name: Build and push Docker image
         if: env.new_caddy_image == 'true'
         run: |
-          docker build -t edipdi/nc-with-ffmpeg-im:latest .
-          docker push edipdi/nc-with-ffmpeg-im:latest
+          docker build -t edipdi/caddy-cloudflaredns:latest .
+          docker push edipdi/caddy-cloudflaredns:latest
