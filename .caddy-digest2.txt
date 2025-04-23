@@ -1,1 +1,1 @@
-caddy@sha256:cd1ac8021b8652eb0b2ed24baf72fa3cee77d3b9aefddc8dadd17656c9b80a34
+caddy@sha256:e759110e56bae353dbceddff9d7665feb5229d5afac1a5e7e3f42d99218f9ba6
