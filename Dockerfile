@@ -2,8 +2,8 @@ FROM caddy:builder AS builder
 
 RUN xcaddy build \
     --with github.com/caddy-dns/cloudflare \
-    --with github.com/corazawaf/coraza-caddy/v2 \
-    --with github.com/mholt/caddy-webdav
+    --with github.com/mholt/caddy-webdav \
+    --with github.com/porech/caddy-maxmind-geolocation
 
 FROM caddy:latest
 
