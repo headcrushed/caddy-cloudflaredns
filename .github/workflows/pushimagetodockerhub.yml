@@ -74,7 +74,7 @@ jobs:
           git push https://x-access-token:${{ secrets.PAT_TOKE }}@github.com/${{ github.repository }} HEAD:main
 
       - name: Build and push Docker image
-        if: env.new_caddy_image == 'true'
+        if: env.new_caddy_image == 'false'
         run: |
           docker build -t edipdi/caddy-cloudflaredns:latest .
           docker push edipdi/caddy-cloudflaredns:latest
